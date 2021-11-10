@@ -1,53 +1,51 @@
 package org.generation.blodPessoal.model;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
+import javax.validation.constraints.NotBlank;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+/**
+ * Classe espelho da tabela postagem no banco db_blogpessoal.
+ * 
+ * @author Turma34
+ * @since 1.0
+ *
+ */
 @Entity
-@Table(name = "postagem")
 public class Postagem {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private long id;
+	private @Id @GeneratedValue(strategy = GenerationType.IDENTITY) Long idPostagem;
+	private @NotBlank String titulo;
+	private @NotBlank String descricao;
 
-	@NotNull
-	@Size(min = 5, max = 100)
-	private String titulo;
-
-	@NotNull
-	@Size(min = 10, max = 500)
-	private String texto;
-
-	@Temporal(TemporalType.TIMESTAMP)
-	private Date date = new java.sql.Date(System.currentTimeMillis());
+	@JsonFormat(pattern = "yyyy-MM-dd")
+	private LocalDate dataPostagem = LocalDate.now();
 
 	@ManyToOne
-	@JsonIgnoreProperties("postagem")
-	private Tema tema;
-	
-	@ManyToOne
-	@JsonIgnoreProperties("postagem")
-	private Usuario usuario;
+	@JoinColumn(name = "usuario_id")
+	@JsonIgnoreProperties({"minhasPostagens"})
+	private Usuario criador;
 
-	public long getId() {
-		return id;
+	@ManyToOne
+	@JoinColumn(name = "tema_id")
+	@JsonIgnoreProperties({"postagens"})
+	private Tema temaRelacionado;
+
+	public Long getIdPostagem() {
+		return idPostagem;
 	}
 
-	public void setId(long id) {
-		this.id = id;
+	public void setIdPostagem(Long idPostagem) {
+		this.idPostagem = idPostagem;
 	}
 
 	public String getTitulo() {
@@ -58,36 +56,36 @@ public class Postagem {
 		this.titulo = titulo;
 	}
 
-	public String getTexto() {
-		return texto;
+	public String getDescricao() {
+		return descricao;
 	}
 
-	public void setTexto(String texto) {
-		this.texto = texto;
+	public void setDescricao(String descricao) {
+		this.descricao = descricao;
 	}
 
-	public Date getDate() {
-		return date;
+	public LocalDate getDataPostagem() {
+		return dataPostagem;
 	}
 
-	public void setDate(Date date) {
-		this.date = date;
+	public void setDataPostagem(LocalDate dataPostagem) {
+		this.dataPostagem = dataPostagem;
 	}
 
-	public Tema getTema() {
-		return tema;
+	public Usuario getCriador() {
+		return criador;
 	}
 
-	public void setTema(Tema tema) {
-		this.tema = tema;
+	public void setCriador(Usuario criador) {
+		this.criador = criador;
 	}
 
-	public Usuario getUsuario() {
-		return usuario;
+	public Tema getTemaRelacionado() {
+		return temaRelacionado;
 	}
 
-	public void setUsuario(Usuario usuario) {
-		this.usuario = usuario;
+	public void setTemaRelacionado(Tema temaRelacionado) {
+		this.temaRelacionado = temaRelacionado;
 	}
 
 }
