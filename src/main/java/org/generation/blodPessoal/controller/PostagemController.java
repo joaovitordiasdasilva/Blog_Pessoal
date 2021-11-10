@@ -1,11 +1,11 @@
 package org.generation.blodPessoal.controller;
 
 import java.util.List;
+import java.util.Optional;
 
-import org.generation.blodPessoal.model.Postagem;
-import org.generation.blodPessoal.repository.PostagemRepository;
+import javax.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,45 +17,79 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.generation.blodPessoal.model.Postagem;
+import org.generation.blodPessoal.repository.PostagemRepository;
+
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 
 @RestController
-@RequestMapping("/postagens")
-@CrossOrigin("*")
-@Api(tags = "Controlador de Postagem", description = "Utilitario de postagens")
+@RequestMapping("/api/v1/postagem")
+@Api(tags = "Controlador de Postagem", description = "Utilitario de Postagens")
+@CrossOrigin(allowedHeaders = "*", origins = "*")
 public class PostagemController {
 
-	@Autowired
-	private PostagemRepository repository;
+	private @Autowired PostagemRepository repositorio;
 
-	@GetMapping
-	public ResponseEntity<List<Postagem>> GetAll() {
-		return ResponseEntity.ok(repository.findAll());
+	@ApiOperation(value = "Busca lista de postagens no sistema")
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = "Retorna lista de postagens")
+	})
+	@GetMapping("/todas")
+	public ResponseEntity<List<Postagem>> pegarTodas() {
+		return ResponseEntity.ok(repositorio.findAll());
+
 	}
 
-	@GetMapping("/{id}")
-	public ResponseEntity<Postagem> GetById(@PathVariable long id) {
-		return repository.findById(id).map(resp -> ResponseEntity.ok(resp)).orElse(ResponseEntity.notFound().build());
+	@ApiOperation(value = "Busca postagem por Id")
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = "Retorna postagem existente"),
+			@ApiResponse(code = 204, message = "Retorno inexistente")
+	})
+	@GetMapping("/{id_postagem}")
+	public ResponseEntity<Postagem> pegarPorId(@PathVariable(value = "id_postagem") Long idPostagem) {
+		return repositorio.findById(idPostagem).map(resp -> ResponseEntity.ok(resp))
+				.orElse(ResponseEntity.noContent().build());
+
 	}
 
-	@GetMapping("/titulo/{titulo}")
-	public ResponseEntity<List<Postagem>> GetByTitulo(@PathVariable String titulo) {
-		return ResponseEntity.ok(repository.findAllByTituloContainingIgnoreCase(titulo));
+	@ApiOperation(value = "Salva nova postagem no sistema")
+	@ApiResponses(value = {
+			@ApiResponse(code = 201, message = "Retorna postagem cadastrada")
+	})
+	@PostMapping("/salvar")
+	public ResponseEntity<Postagem> salvar(@Valid @RequestBody Postagem novaPostagem) {
+		return ResponseEntity.status(201).body(repositorio.save(novaPostagem));
+
 	}
 
-	@PostMapping
-	public ResponseEntity<Postagem> post(@RequestBody Postagem postagem) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(repository.save(postagem));
+	@ApiOperation(value = "Atualizar postagem existente")
+	@ApiResponses(value = {
+			@ApiResponse(code = 201, message = "Retorna postagem atualizada")
+	})
+	@PutMapping("/atualizar")
+	public ResponseEntity<Postagem> atualizar(@Valid @RequestBody Postagem novaPostagem) {
+		return ResponseEntity.status(201).body(repositorio.save(novaPostagem));
+
 	}
 
-	@PutMapping
-	public ResponseEntity<Postagem> put(@RequestBody Postagem postagem) {
-		return ResponseEntity.status(HttpStatus.OK).body(repository.save(postagem));
-	}
+	@ApiOperation(value = "Deletar postagem existente")
+	@ApiResponses(value = {
+			@ApiResponse(code = 200, message = "Caso deletada!"),
+			@ApiResponse(code = 400, message = "Id de postagem invalida")
+	})
+	@DeleteMapping("/deletar/{id_postagem}")
+	public ResponseEntity<Postagem> deletar(@PathVariable(value = "id_postagem") Long idPostagem) {
+		Optional<Postagem> objetoOptional = repositorio.findById(idPostagem);
 
-	@DeleteMapping("/{id}")
-	public void delete(@PathVariable long id) {
-		repository.deleteById(id);
+		if (objetoOptional.isPresent()) {
+			repositorio.deleteById(idPostagem);
+			return ResponseEntity.status(200).build();
+		} else {
+			return ResponseEntity.status(400).build();
+		}
 	}
 
 }

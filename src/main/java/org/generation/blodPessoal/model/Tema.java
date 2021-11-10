@@ -1,5 +1,6 @@
 package org.generation.blodPessoal.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.CascadeType;
@@ -8,47 +9,52 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import io.swagger.annotations.ApiModelProperty;
+
+/**
+ * Classe espelho da tabela tema no banco db_blogpessoal.
+ * 
+ * @author Turma34
+ * @since 1.0
+ *
+ */
 @Entity
-@Table(name = "tb_tema")
 public class Tema {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private long id;
 
-	@NotNull
-	private String descricao;
+	private @Id @GeneratedValue(strategy = GenerationType.IDENTITY) Long idTema;
+	private @NotBlank String tema;
 
-	@OneToMany(mappedBy = "tema", cascade = CascadeType.ALL)
-	@JsonIgnoreProperties("tema")
-	private List<Postagem> postagem;
+	@OneToMany(mappedBy = "temaRelacionado", cascade = CascadeType.REMOVE)
+	@JsonIgnoreProperties({"temaRelacionado"})
+	@ApiModelProperty(hidden = true)
+	private List<Postagem> postagens = new ArrayList<>();
 
-	public long getId() {
-		return id;
+	public Long getIdTema() {
+		return idTema;
 	}
 
-	public void setId(long id) {
-		this.id = id;
+	public void setIdTema(Long idTema) {
+		this.idTema = idTema;
 	}
 
-	public String getDescricao() {
-		return descricao;
+	public String getTema() {
+		return tema;
 	}
 
-	public void setDescricao(String descricao) {
-		this.descricao = descricao;
+	public void setTema(String tema) {
+		this.tema = tema;
 	}
 
-	public List<Postagem> getPostagem() {
-		return postagem;
+	public List<Postagem> getPostagens() {
+		return postagens;
 	}
 
-	public void setPostagem(List<Postagem> postagem) {
-		this.postagem = postagem;
+	public void setPostagens(List<Postagem> postagens) {
+		this.postagens = postagens;
 	}
 
 }

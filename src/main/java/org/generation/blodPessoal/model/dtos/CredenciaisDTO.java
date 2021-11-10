@@ -73,4 +73,6 @@ public class CredenciaisDTO {
 		this.tipo = tipo;
 	}
 	
+	
+	
 }

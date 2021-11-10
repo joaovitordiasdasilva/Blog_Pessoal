@@ -3,52 +3,137 @@ package org.generation.blodPessoal.servicos;
 import java.nio.charset.Charset;
 import java.util.Optional;
 
-import org.apache.tomcat.util.codec.binary.Base64;
-import org.generation.blodPessoal.model.UserLogin;
-import org.generation.blodPessoal.model.Usuario;
+import org.apache.commons.codec.binary.Base64;
 import org.generation.blodPessoal.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import org.generation.blodPessoal.model.Usuario;
+import org.generation.blodPessoal.model.dtos.CredenciaisDTO;
+import org.generation.blodPessoal.model.dtos.UsuarioLoginDTO;
 
 @Service
 public class UsuarioServicos {
 
-	@Autowired
-	private UsuarioRepository repository;
+	private @Autowired UsuarioRepository repositorio;
 
-	public Usuario CadastrarUsuario(Usuario usuario) {
+	/**
+	 * Método estatico que recebe a senha do usuario o criptografa
+	 * 
+	 * @param senha
+	 * @return String da senha criptografada
+ 	 * @since 1.0
+	 * @author Turma34
+	 * 
+	 */
+	private static String encriptadorDeSenha(String senha) {
 		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-
-		String senhaEncoder = encoder.encode(usuario.getSenha());
-		usuario.setSenha(senhaEncoder);
-
-		return repository.save(usuario);
+		return encoder.encode(senha);
 
 	}
 
-	public Optional<UserLogin> Logar(Optional<UserLogin> user) {
-		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-		Optional<Usuario> usuario = repository.findByUsuario(user.get().getUsuario());
+	/**
+	 * Metodo utilizado para cadastrar usuário validando duplicidade de email no
+	 * banco
+	 * 
+	 * @param usuarioParaCadastrar do tipo Usuario
+	 * @return Optional com Usuario cadastrado caso email não seja existente
+	 * @author Turma34
+	 * @since 2.0
+	 * 
+	 */
+	public Optional<Object> cadastrarUsuario(Usuario usuarioParaCadastrar) {
+		return repositorio.findByEmail(usuarioParaCadastrar.getEmail()).map(usuarioExistente -> {
+			return Optional.empty();
+		}).orElseGet(() -> {
+			usuarioParaCadastrar.setSenha(encriptadorDeSenha(usuarioParaCadastrar.getSenha()));
+			return Optional.ofNullable(repositorio.save(usuarioParaCadastrar));
+		});
 
-		if (usuario.isPresent()) {
-			if (encoder.matches(user.get().getSenha(), usuario.get().getSenha())) {
+	}
 
-				String auth = user.get().getUsuario() + ":" + user.get().getSenha();
-				byte[] encodeAuth = Base64.encodeBase64(auth.getBytes(Charset.forName("US-ASCII")));
-				String authHeader = "Basic " + new String(encodeAuth);
+	/**
+	 * Metodo utilizado para atualizar usuario no banco
+	 * 
+	 * @param usuarioParaAtualizar do tipo Usuario
+	 * @return Optional com Usuario atualizado
+	 * @author Turma34
+	 * @since 1.5
+	 * 
+	 */
+	public Optional<Usuario> atualizarUsuario(Usuario usuarioParaAtualizar) {
+		return repositorio.findById(usuarioParaAtualizar.getIdUsuario()).map(resp -> {
+			resp.setNome(usuarioParaAtualizar.getNome());
+			resp.setSenha(encriptadorDeSenha(usuarioParaAtualizar.getSenha()));
+			return Optional.ofNullable(repositorio.save(resp));
+		}).orElseGet(() -> {
+			return Optional.empty();
+		});
 
-				user.get().setToken(authHeader);
-				user.get().setId(usuario.get().getId());
-				user.get().setNome(usuario.get().getNome());
-				user.get().setFoto(usuario.get().getFoto());
-				user.get().setTipo(usuario.get().getTipo());
+	}
+	
+	/**
+	 * Metodo estatico utilizado para gerar token formato Basic
+	 * 
+	 * <p> estrutura ex. gustavo@email.com:134652
+	 * <p> estruturaBase64 ex. cGFtZWxhQGVtYWlsLmNvbToxMzQ2NTI
+	 * <p> estruturaBasic = Basic cGFtZWxhQGVtYWlsLmNvbToxMzQ2NTI
+	 * 
+	 * @param email
+	 * @param senha
+	 * @return Token no formato Basic para autenticação
+	 * @since 1.0
+	 * @author Turma34
+	 * 
+	 */
+	private static String gerarToken(String email, String senha) {
+		String estrutura = email + ":" + senha;
+		byte[] estruturaBase64 = Base64.encodeBase64(estrutura.getBytes(Charset.forName("US-ASCII")));
+		return "Basic " + new String(estruturaBase64);
 
-				return user;
+	}
+
+	/**
+	 * Metodo utilizado para pegar credenciais do usuario com Tokem (Formato Basic),
+	 * este método sera utilizado para retornar ao front o token utilizado para ter
+	 * acesso aos dados do usuario e mantelo logado no sistema
+	 * 
+	 * @param usuarioParaAutenticar do tipo UsuarioLoginDTO necessario email e senha
+	 *                              para validar
+	 * @return ResponseEntity com CredenciaisDTO preenchido com informações mais o
+	 *         Token
+	 * @since 1.0
+	 * @author Turma34
+	 * 
+	 */
+	public ResponseEntity<CredenciaisDTO> pegarCredenciais(UsuarioLoginDTO usuarioParaAutenticar) {
+		return repositorio.findByEmail(usuarioParaAutenticar.getEmail()).map(resp -> {
+			BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+			if (encoder.matches(usuarioParaAutenticar.getSenha(), resp.getSenha())) {
+
+				CredenciaisDTO objetoCredenciaisDTO = new CredenciaisDTO();
+
+				objetoCredenciaisDTO.setToken(gerarToken(usuarioParaAutenticar.getEmail(), usuarioParaAutenticar.getSenha()));
+				objetoCredenciaisDTO.setIdUsuario(resp.getIdUsuario());
+				objetoCredenciaisDTO.setNome(resp.getNome());
+				objetoCredenciaisDTO.setEmail(resp.getEmail());
+				objetoCredenciaisDTO.setSenha(resp.getSenha());
+				objetoCredenciaisDTO.setTipo(resp.getTipo());
+				objetoCredenciaisDTO.setFoto(resp.getFoto());
+
+				return ResponseEntity.status(201).body(objetoCredenciaisDTO); // Usuario Credenciado
+			} else {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Senha Incorreta!"); // Senha incorreta
 			}
-		}
+		}).orElseGet(() -> {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email não existe!"); // Email não existe
+		});
 
-		return null;
 	}
 
 }
